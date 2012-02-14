@@ -51,11 +51,19 @@ var vertexBuffer = null;
 var indexBuffer = null;
 var shaderProgram = null;
 
+function throwOnGLError(err, funcName, args)
+{
+  var gl_error = WebGLDebugUtils.glEnumToString(err);
+  throw new Error("WebGL Error: '" + gl_error + "' was caused by call to '" + funcName + "'");
+}
+
 function initGL(canvas) 
 {
   var gl = WebGLUtils.setupWebGL(canvas[0]);
   if (gl)
   {
+    gl = WebGLDebugUtils.makeDebugContext(gl, throwOnGLError);
+
     gl.viewportWidth = canvas.width();
     gl.viewportHeight = canvas.height();
   }
@@ -113,15 +121,24 @@ function loadShaders(gl, vertex_code, fragment_code)
 
   sp.vertexPositionAttribute = 
       gl.getAttribLocation(sp, "aVertexPosition");
-  gl.enableVertexAttribArray(sp.vertexPositionAttribute);
+  if (sp.vertexPositionAttribute != -1)
+  {
+    gl.enableVertexAttribArray(sp.vertexPositionAttribute);
+  }
 
   sp.vertexNormalAttribute = 
       gl.getAttribLocation(sp, "aVertexNormal");
-  gl.enableVertexAttribArray(sp.vertexNormalAttribute);
+  if (sp.vertexNormalAttribute != -1)
+  {
+    gl.enableVertexAttribArray(sp.vertexNormalAttribute);
+  }
 
   sp.textureCoordAttribute = 
       gl.getAttribLocation(sp, "aTextureCoord");
-  gl.enableVertexAttribArray(sp.textureCoordAttribute);
+  if (sp.textureCoordAttribute != -1)
+  {
+    gl.enableVertexAttribArray(sp.textureCoordAttribute);
+  }
 
   sp.pMatrixUniform = 
       gl.getUniformLocation(sp, "uPMatrix");
@@ -191,18 +208,23 @@ function degToRad(degrees)
 
 function loadGeometry(gl, c2g_file)
 {
-  tmpBuffer = rawStringToBuffer(c2g_file, 2, 18);
-  buffer = rawStringToBuffer(c2g_file);
+  var buffer2_20 = rawStringToBuffer(c2g_file, 2, 18);
+  var buffer0_20 = rawStringToBuffer(c2g_file, 0, 20);
 
-  var numVertices = Uint32Array(tmpBuffer, 8, 1)[0];
+  var numVertices = Uint32Array(buffer2_20, 8, 1)[0];
   console.log(numVertices);
-  var numIndices = Uint32Array(buffer, 16, 1)[0];
+  var numIndices = Uint32Array(buffer0_20, 16, 1)[0];
   console.log(numIndices);
+
+  var vertexArrayBuffer = rawStringToBuffer(c2g_file, 
+      20, 6 * 4 * numVertices);
+  var indexArrayBuffer = rawStringToBuffer(c2g_file, 
+      20 + 6 * 4 * numVertices, 2 * numIndices);
 
   vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, 
-      new Float32Array(buffer, 20, numVertices), 
+      new Float32Array(vertexArrayBuffer), 
       gl.STATIC_DRAW);
   vertexBuffer.itemSize = 6;
   vertexBuffer.numItems = numVertices;
@@ -210,7 +232,7 @@ function loadGeometry(gl, c2g_file)
   indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, 
-      new Uint16Array(buffer, 20 + 6 * 4 * numVertices, numIndices), 
+      new Uint16Array(indexArrayBuffer), 
       gl.STATIC_DRAW);
   indexBuffer.itemSize = 1;
   indexBuffer.numItems = numIndices;
@@ -232,11 +254,14 @@ function drawScene(gl, vertexBuffer, indexBuffer)
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
-      vertexBuffer.itemSize, gl.FLOAT, false, 6, 0);
+      3, gl.FLOAT, false, 6 * 4, 0);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, 
-      vertexBuffer.itemSize, gl.FLOAT, false, 6, 3);
+  if (shaderProgram.vertexNormalAttribute != -1)
+  {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, 
+        3, gl.FLOAT, false, 6 * 4, 3);
+  }
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   setMatrixUniforms();
@@ -261,37 +286,36 @@ function reloadData()
     return;
 
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);
 
-  //try
+  cancelRequestAnimFrame();
+
+  try
   {
     shaderProgram = loadShaders(gl, 
         $("#vertex-shader").val(), 
         $("#fragment-shader").val());
   }
-  /*catch (e)
+  catch (e)
   {
     alert(e.message);
-    //return;
-    throw e;
-  }*/
+    return;
+  }
 
-  //try
+  try
   {
     var c2g_file = $.base64.decode($("#c2g-base64").val().split('\n').join(''));
     var geom = loadGeometry(gl, c2g_file);
   }
-  /*catch (e)
+  catch (e)
   {
     alert(e.message);
-    //return;
-    throw e;
-  }*/
+    return;
+  }
 
   var vertexBuffer = geom[0];
   var indexBuffer = geom[1];
-
-  cancelRequestAnimFrame();
 
   if (vertexBuffer == null || indexBuffer == null)
   {
