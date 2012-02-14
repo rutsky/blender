@@ -244,7 +244,6 @@ function loadGeometry(gl, c2g_file)
 function drawScene(gl, vertexBuffer, indexBuffer)
 {
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
 
@@ -265,6 +264,8 @@ function drawScene(gl, vertexBuffer, indexBuffer)
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   setMatrixUniforms();
+
+  //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawElements(gl.TRIANGLES, indexBuffer.numItems / 3, 
       gl.UNSIGNED_SHORT, 0);
 }
