@@ -51,6 +51,7 @@ var vertexBuffer = null;
 var indexBuffer = null;
 var shaderProgram = null;
 var animRequest = null;
+var startTime = new Date().getTime() / 1000.0;
 
 function throwOnGLError(err, funcName, args)
 {
@@ -64,6 +65,9 @@ function initGL(canvas)
   if (gl)
   {
     gl = WebGLDebugUtils.makeDebugContext(gl, throwOnGLError);
+
+    canvas[0].width = canvas.width();
+    canvas[0].height = canvas.height();
 
     gl.viewportWidth = canvas.width();
     gl.viewportHeight = canvas.height();
@@ -132,14 +136,12 @@ function loadShaders(gl, vertex_code, fragment_code)
   if (sp.textureCoordAttribute != -1)
     gl.enableVertexAttribArray(sp.textureCoordAttribute);
 
-  sp.pMatrixUniform = 
-      gl.getUniformLocation(sp, "uPMatrix");
-  sp.mvMatrixUniform = 
-      gl.getUniformLocation(sp, "uMVMatrix");
-  sp.nMatrixUniform = 
-      gl.getUniformLocation(sp, "uNMatrix");
-  sp.samplerUniform = 
-      gl.getUniformLocation(sp, "uSampler");
+  sp.pMatrixUniform = gl.getUniformLocation(sp, "uPMatrix");
+  sp.mvMatrixUniform = gl.getUniformLocation(sp, "uMVMatrix");
+  sp.nMatrixUniform = gl.getUniformLocation(sp, "uNMatrix");
+  sp.samplerUniform = gl.getUniformLocation(sp, "uSampler");
+
+  sp.timeUniform = gl.getUniformLocation(sp, "uTime");
 
   return sp;
 }
@@ -232,12 +234,15 @@ function drawScene(gl, vertexBuffer, indexBuffer)
 {
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 
-  mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 
-      0.1, 100.0, pMatrix);
+  mat4.perspective(90, gl.viewportWidth / gl.viewportHeight, 
+      0.1, 10.0, pMatrix);
 
   mat4.identity(mvMatrix);
-  mat4.translate(mvMatrix, [0, 0, -40]);
+  mat4.translate(mvMatrix, [0, 0, -2]);
   setMatrixUniforms();
+
+  var time = new Date().getTime() / 1000.0 - startTime;
+  gl.uniform1f(shaderProgram.timeUniform, time);
 
   if (shaderProgram.vertexPositionAttribute != -1)
   {
@@ -254,7 +259,11 @@ function drawScene(gl, vertexBuffer, indexBuffer)
   }
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  //gl.drawElements(gl.LINE_STRIP, indexBuffer.numIndices / 3, 
+  //    gl.UNSIGNED_SHORT, 0);
   gl.drawElements(gl.TRIANGLES, indexBuffer.numIndices / 3, 
       gl.UNSIGNED_SHORT, 0);
 }
@@ -330,7 +339,7 @@ function webGLStart()
   $("#fragment-shader").val(
       getSync("glsl/fragment.glsl")).width("100%");
   $("#c2g-base64").val(
-      getSync("data/cube.c2g.txt")).width("100%");
+      getSync("data/monkey.c2g.txt")).width("100%");
 
   $("#apply-button").click(reloadData);
 
