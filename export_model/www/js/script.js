@@ -50,6 +50,7 @@ var gl = null;
 var vertexBuffer = null;
 var indexBuffer = null;
 var shaderProgram = null;
+var animRequest = null;
 
 function throwOnGLError(err, funcName, args)
 {
@@ -119,26 +120,17 @@ function loadShaders(gl, vertex_code, fragment_code)
 
   gl.useProgram(sp);
 
-  sp.vertexPositionAttribute = 
-      gl.getAttribLocation(sp, "aVertexPosition");
+  sp.vertexPositionAttribute = gl.getAttribLocation(sp, "aVertexPosition");
   if (sp.vertexPositionAttribute != -1)
-  {
     gl.enableVertexAttribArray(sp.vertexPositionAttribute);
-  }
 
-  sp.vertexNormalAttribute = 
-      gl.getAttribLocation(sp, "aVertexNormal");
+  sp.vertexNormalAttribute = gl.getAttribLocation(sp, "aVertexNormal");
   if (sp.vertexNormalAttribute != -1)
-  {
     gl.enableVertexAttribArray(sp.vertexNormalAttribute);
-  }
 
-  sp.textureCoordAttribute = 
-      gl.getAttribLocation(sp, "aTextureCoord");
+  sp.textureCoordAttribute = gl.getAttribLocation(sp, "aTextureCoord");
   if (sp.textureCoordAttribute != -1)
-  {
     gl.enableVertexAttribArray(sp.textureCoordAttribute);
-  }
 
   sp.pMatrixUniform = 
       gl.getUniformLocation(sp, "uPMatrix");
@@ -148,22 +140,6 @@ function loadShaders(gl, vertex_code, fragment_code)
       gl.getUniformLocation(sp, "uNMatrix");
   sp.samplerUniform = 
       gl.getUniformLocation(sp, "uSampler");
-  sp.materialShininessUniform = 
-      gl.getUniformLocation(sp, "uMaterialShininess");
-  sp.showSpecularHighlightsUniform = 
-      gl.getUniformLocation(sp, "uShowSpecularHighlights");
-  sp.useTexturesUniform = 
-      gl.getUniformLocation(sp, "uUseTextures");
-  sp.useLightingUniform = 
-      gl.getUniformLocation(sp, "uUseLighting");
-  sp.ambientColorUniform = 
-      gl.getUniformLocation(sp, "uAmbientColor");
-  sp.pointLightingLocationUniform = 
-      gl.getUniformLocation(sp, "uPointLightingLocation");
-  sp.pointLightingSpecularColorUniform = 
-      gl.getUniformLocation(sp, "uPointLightingSpecularColor");
-  sp.pointLightingDiffuseColorUniform = 
-      gl.getUniformLocation(sp, "uPointLightingDiffuseColor");
 
   return sp;
 }
@@ -191,13 +167,18 @@ function mvPopMatrix()
 
 function setMatrixUniforms()
 {
-  gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-  gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+  if (shaderProgram.pMatrixUniform != -1)
+    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+  if (shaderProgram.mvMatrixUniform != -1)
+    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
 
-  var normalMatrix = mat3.create();
-  mat4.toInverseMat3(mvMatrix, normalMatrix);
-  mat3.transpose(normalMatrix);
-  gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
+  if (shaderProgram.nMatrixUniform)
+  {
+    var normalMatrix = mat3.create();
+    mat4.toInverseMat3(mvMatrix, normalMatrix);
+    mat3.transpose(normalMatrix);
+    gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
+  }
 }
 
 function degToRad(degrees)
@@ -211,17 +192,16 @@ function loadGeometry(gl, c2g_file)
   var buffer2_20 = rawStringToBuffer(c2g_file, 2, 18);
   var buffer0_20 = rawStringToBuffer(c2g_file, 0, 20);
 
-  var numVertices = Uint32Array(buffer2_20, 8, 1)[0];
+  var numVertices = new Uint32Array(buffer2_20, 8, 1)[0];
   console.log(numVertices);
-  var numIndices = Uint32Array(buffer0_20, 16, 1)[0];
+  var numIndices = new Uint32Array(buffer0_20, 16, 1)[0];
   console.log(numIndices);
 
-  // GLOBAL FOR DEBUG
-  vertexFloat32Array = new Float32Array(
+  var vertexFloat32Array = new Float32Array(
       rawStringToBuffer(c2g_file, 
           20, 
           6 * 4 * numVertices));
-  indexUint16Array = new Uint16Array(
+  var indexUint16Array = new Uint16Array(
       rawStringToBuffer(c2g_file, 
           20 + 6 * 4 * numVertices, 
           2 * numIndices));
@@ -252,15 +232,19 @@ function drawScene(gl, vertexBuffer, indexBuffer)
 {
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 
-  mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+  mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 
+      0.1, 100.0, pMatrix);
 
   mat4.identity(mvMatrix);
-
   mat4.translate(mvMatrix, [0, 0, -40]);
+  setMatrixUniforms();
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
-      3, gl.FLOAT, false, 6 * 4, 0);
+  if (shaderProgram.vertexPositionAttribute != -1)
+  {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
+        3, gl.FLOAT, false, 6 * 4, 0);
+  }
 
   if (shaderProgram.vertexNormalAttribute != -1)
   {
@@ -270,8 +254,6 @@ function drawScene(gl, vertexBuffer, indexBuffer)
   }
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  setMatrixUniforms();
-
   //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawElements(gl.TRIANGLES, indexBuffer.numIndices / 3, 
       gl.UNSIGNED_SHORT, 0);
@@ -280,7 +262,7 @@ function drawScene(gl, vertexBuffer, indexBuffer)
 
 function tick(gl, vertexBuffer, indexBuffer)
 {
-  requestAnimFrame(function() { 
+  animRequest = requestAnimFrame(function() { 
     tick(gl, vertexBuffer, indexBuffer); 
   });
 
@@ -297,7 +279,11 @@ function reloadData()
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);
 
-  cancelRequestAnimFrame();
+  if (animRequest != null)
+  {
+    cancelRequestAnimFrame(animRequest);
+    animRequest = null;
+  }
 
   try
   {
