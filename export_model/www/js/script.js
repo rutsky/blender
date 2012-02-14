@@ -337,7 +337,9 @@ function webGLStart()
   $("#fragment-shader").val(
       getSync("glsl/fragment.glsl")).width("100%");
   $("#c2g-base64").val(
-      getSync("data/monkey.c2g.txt")).width("100%");
+      getSync("data/cube.c2g.txt")).width("100%");
+
+  $("#apply-button").click(reloadData);
 
   reloadData();
 }

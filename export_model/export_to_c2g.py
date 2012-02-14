@@ -32,6 +32,9 @@ def object_data(obj, convert_quads_to_tris):
 def prepare_data_v1_0(vertices, indices):
     # All numeric types stored in little-endian.
 
+    # See <http://docs.python.org/py3k/library/struct.html> for details about
+    # serialization with struct.
+
     data = b''
 
     #  0: 4 bytes - magic
