@@ -1,26 +1,30 @@
 body {
-  padding-top: 60px; /* 60px to make the container go all the way to the 
-                        bottom of the topbar */
 }
  
 #canvas {
   border: none;
-  width: 100%;
-  height: 100%;
-}
-
-#canvas-wrapper {
-  padding: 5px;
   width: 640px;
   height: 480px;
 }
 
+#canvas-wrapper {
+  margin: 5px;
+  width: 640px;
+  height: 480px;
+  margin: 0px auto;
+}
+
 #loadingtext {
-  /*position: absolute;
-  top: 240px;
-  left: 240px;*/
   font-size: 2em;
   color: white;
+}
+
+#vertex-shader {
+  width: 100%:
+}
+
+#fragment-shader {
+  width: 100%:
 }
 
 /* vim: set ts=2 sw=2 et: */

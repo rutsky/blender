@@ -81,7 +81,7 @@ var makeFailHTML = function(msg) {
  */
 var GET_A_WEBGL_BROWSER = '' +
   'This page requires a browser that supports WebGL.<br/>' +
-  '<a href="http://get.webgl.org">Click here to upgrade your browser.</a>';
+  '<a href="http://www.khronos.org/webgl/wiki/Getting_a_WebGL_Implementation">Click here to upgrade your browser.</a>';
 
 /**
  * Mesasge for need better hardware
