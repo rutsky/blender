@@ -262,9 +262,7 @@ function drawScene(gl, vertexBuffer, indexBuffer)
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  //gl.drawElements(gl.LINE_STRIP, indexBuffer.numIndices / 3, 
-  //    gl.UNSIGNED_SHORT, 0);
-  gl.drawElements(gl.TRIANGLES, indexBuffer.numIndices / 3, 
+  gl.drawElements(gl.TRIANGLES, indexBuffer.numIndices, 
       gl.UNSIGNED_SHORT, 0);
 }
 
