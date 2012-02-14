@@ -8,10 +8,9 @@ body {
 }
 
 #canvas-wrapper {
-  margin: 5px;
   width: 640px;
   height: 480px;
-  margin: 0px auto;
+  margin: 5px auto;
 }
 
 #loadingtext {
@@ -25,6 +24,16 @@ body {
 
 #fragment-shader {
   width: 100%:
+}
+
+#canvas-row {
+  position: relative;
+}
+
+#apply-button {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
 }
 
 /* vim: set ts=2 sw=2 et: */

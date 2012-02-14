@@ -11,7 +11,7 @@
   <script src="js/jquery-1.7.1.min.js"></script>
   <script src="js/bootstrap.min.js"></script>
   <script src="js/jquery.center.js"></script>
-  <script src="js/jquery-ui-1.8.17.custom.min.js"></script>
+  <!--<script src="js/jquery-ui-1.8.17.custom.min.js"></script>-->
   <script src="js/jquery.base64.min.js"></script>
   <script src="js/webgl-debug.js"></script>
   <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -53,14 +53,20 @@
 
 <div class="container">
   <div class="row">
-    <div class="span12">
+    <div id="canvas-row" class="span12">
       <div id="canvas-wrapper">
         <canvas id="canvas"></canvas>
       </div>
+      <button id="apply-button" class="btn btn-primary btn-large">Apply</button>
     </div>
   </div>
 
-
+  <div class="row">
+    <div class="span12">
+      <div>
+      </div>
+    </div>
+  </div>
   <div class="row">
     <div class="span6">
       <div>
@@ -80,13 +86,6 @@
       <div>
         <label for="textarea">C2G file (base64-encoded):</label>
         <textarea id="c2g-base64" rows="7"></textarea>
-      </div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="span12">
-      <div>
-        <input id="apply-button" class="button" type="submit" value="Apply"/>
       </div>
     </div>
   </div>

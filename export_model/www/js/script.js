@@ -216,26 +216,33 @@ function loadGeometry(gl, c2g_file)
   var numIndices = Uint32Array(buffer0_20, 16, 1)[0];
   console.log(numIndices);
 
-  var vertexArrayBuffer = rawStringToBuffer(c2g_file, 
-      20, 6 * 4 * numVertices);
-  var indexArrayBuffer = rawStringToBuffer(c2g_file, 
-      20 + 6 * 4 * numVertices, 2 * numIndices);
+  // GLOBAL FOR DEBUG
+  vertexFloat32Array = new Float32Array(
+      rawStringToBuffer(c2g_file, 
+          20, 
+          6 * 4 * numVertices));
+  indexUint16Array = new Uint16Array(
+      rawStringToBuffer(c2g_file, 
+          20 + 6 * 4 * numVertices, 
+          2 * numIndices));
 
   vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, 
-      new Float32Array(vertexArrayBuffer), 
-      gl.STATIC_DRAW);
-  vertexBuffer.itemSize = 6;
-  vertexBuffer.numItems = numVertices;
+      vertexFloat32Array, gl.STATIC_DRAW);
+  vertexBuffer.vertexSize = 6;
+  vertexBuffer.numVertices = numVertices;
 
   indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, 
-      new Uint16Array(indexArrayBuffer), 
-      gl.STATIC_DRAW);
-  indexBuffer.itemSize = 1;
-  indexBuffer.numItems = numIndices;
+      indexUint16Array, gl.STATIC_DRAW);
+  indexBuffer.numIndices = numIndices;
+
+  console.log("Vertices: " + vertexFloat32Array.length / 6 +
+    ", vertices floats: " + vertexFloat32Array.length);
+  console.log("Indices: " + indexUint16Array.length +
+    ", indices shorts: " + indexUint16Array.length);
 
   return [vertexBuffer, indexBuffer]
 }
@@ -266,7 +273,7 @@ function drawScene(gl, vertexBuffer, indexBuffer)
   setMatrixUniforms();
 
   //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.drawElements(gl.TRIANGLES, indexBuffer.numItems / 3, 
+  gl.drawElements(gl.TRIANGLES, indexBuffer.numIndices / 3, 
       gl.UNSIGNED_SHORT, 0);
 }
 
