@@ -344,7 +344,7 @@ function webGLStart()
 
   $("#apply-button").click(reloadData);
 
-  fpscounter = new FPSCounter($("#fps")[0]);
+  fpscounter = new FPSCounter($("#fps")[0], 50);
 
   reloadData();
 }
