@@ -34,17 +34,17 @@ def prepare_data_v1_0(vertices, indices):
 
     data = b''
 
-    # 4 bytes - magic
+    #  0: 4 bytes - magic
     data += MAGIC
-    # 4 bytes - format version
+    #  4: 4 bytes - format version
     data += b'0100'
-    # 2 bytes unsigned short - single vertex size in bytes
+    #  8: 2 bytes unsigned short - single vertex size in bytes
     data += struct.pack('<H', 4 * 3 + 4 * 3)
-    # 4 bytes unsigned int - number of vertices
+    # 10: 4 bytes unsigned int - number of vertices
     data += struct.pack('<I', len(vertices))
-    # 2 bytes unsigned short - single index size in bytes
+    # 14: 2 bytes unsigned short - single index size in bytes
     data += struct.pack('<H', 2)
-    # 4 bytes unsigned int - number of indices
+    # 16: 4 bytes unsigned int - number of indices
     data += struct.pack('<I', len(indices))
 
     # Vertices
