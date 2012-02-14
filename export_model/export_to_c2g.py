@@ -1,14 +1,6 @@
+# <pep8-80 compliant>
+
 import bpy
-
-
-def export_to_c2g(context, filepath, use_some_setting):
-    print("running write_some_data...")
-    f = open(filepath, 'w')
-    f.write("Hello World %s" % use_some_setting)
-    f.close()
-
-    return {'FINISHED'}
-
 
 # ExportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
@@ -16,10 +8,20 @@ from bpy_extras.io_utils import ExportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 
 
+def export_to_c2g(context, filepath, use_some_setting, convert_quads_to_tris):
+    print("running write_some_data...")
+    f = open(filepath, 'w')
+    #f.write("Hello World %s" % use_some_setting)
+    f.close()
+
+    return {'FINISHED'}
+
+
 class ExportToC2G(bpy.types.Operator, ExportHelper):
-    '''This appears in the tooltip of the operator and in the generated docs.'''
-    bl_idname = "export.c2g"  # this is important since its how bpy.ops.export.some_data is constructed
-    bl_label = "Export to C2G Binary"
+    '''Export to C2G binary format.'''
+    bl_idname = "export.c2g"  # this is important since its how 
+                              # bpy.ops.export.c2g is constructed
+    bl_label = "Export C2G"
 
     # ExportHelper mixin class uses this
     filename_ext = ".c2g"
@@ -31,9 +33,9 @@ class ExportToC2G(bpy.types.Operator, ExportHelper):
 
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
-    use_setting = BoolProperty(
-            name="Example Boolean",
-            description="Example Tooltip",
+    convert_quads_to_tris = BoolProperty(
+            name="Convert Quads to Triangles",
+            description="Subdivide every quad by two triangles in mesh",
             default=True,
             )
 
@@ -50,7 +52,8 @@ class ExportToC2G(bpy.types.Operator, ExportHelper):
         return context.active_object is not None
 
     def execute(self, context):
-        return export_to_c2g(context, self.filepath, self.format_version)
+        return export_to_c2g(context, self.filepath, 
+            self.format_version, self.convert_quads_to_tris)
 
 
 # Only needed if you want to add into a dynamic menu
@@ -69,7 +72,13 @@ def unregister():
 
 
 if __name__ == "__main__":
-    register()
+    if hasattr(bpy.ops.export, 'c2g'):
+        # Tool already registered, unregister.
+        # TODO: Fails!
+        #unregister()
+        pass
+
+    # register() # COMMENTED FOR DEBUG
 
     # test call
     bpy.ops.export.c2g('INVOKE_DEFAULT')
