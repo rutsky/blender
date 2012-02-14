@@ -7,3 +7,4 @@ jquery.center.js from <http://archive.plugins.jquery.com/project/elementcenter>
   (<https://jquerydevbrazil.googlecode.com/svn/trunk/jquery.center.js>@18)
 jquery.base64 from <https://github.com/carlo/jquery-base64.git>@8a544e6917
 webgl-debug.js from <https://cvs.khronos.org/svn/repos/registry/trunk/public/webgl/sdk/debug/webgl-debug.js>
+fpscounter.js from  <https://cvs.khronos.org/svn/repos/registry/trunk/public/webgl/sdk/demos/google/resources/fpscounter.js>

@@ -52,6 +52,7 @@ var indexBuffer = null;
 var shaderProgram = null;
 var animRequest = null;
 var startTime = new Date().getTime() / 1000.0;
+var fpscounter = null;
 
 function throwOnGLError(err, funcName, args)
 {
@@ -232,6 +233,8 @@ function loadGeometry(gl, c2g_file)
 
 function drawScene(gl, vertexBuffer, indexBuffer)
 {
+  fpscounter.update();
+
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 
   mat4.perspective(90, gl.viewportWidth / gl.viewportHeight, 
@@ -340,6 +343,8 @@ function webGLStart()
       getSync("data/monkey.c2g.txt")).width("100%");
 
   $("#apply-button").click(reloadData);
+
+  fpscounter = new FPSCounter($("#fps")[0]);
 
   reloadData();
 }
