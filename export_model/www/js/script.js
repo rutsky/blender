@@ -1,4 +1,3 @@
-
 var gl = null;
 var vertexBuffer = null;
 var indexBuffer = null;
@@ -6,12 +5,17 @@ var shaderProgram = null;
 var animRequest = null;
 var startTime = new Date().getTime() / 1000.0;
 var fpscounter = null;
+var mvMatrix = mat4.create();
+var mvMatrixStack = [];
+var pMatrix = mat4.create();
+
 
 function throwOnGLError(err, funcName, args)
 {
   var gl_error = WebGLDebugUtils.glEnumToString(err);
   throw new Error("WebGL Error: '" + gl_error + "' was caused by call to '" + funcName + "'");
 }
+
 
 function initGL(canvas) 
 {
@@ -101,26 +105,6 @@ function loadShaders(gl, vertex_code, fragment_code)
 }
 
 
-var mvMatrix = mat4.create();
-var mvMatrixStack = [];
-var pMatrix = mat4.create();
-
-function mvPushMatrix() 
-{
-  var copy = mat4.create();
-  mat4.set(mvMatrix, copy);
-  mvMatrixStack.push(copy);
-}
-
-function mvPopMatrix() 
-{
-  if (mvMatrixStack.length == 0) 
-  {
-    throw "Invalid popMatrix!";
-  }
-  mvMatrix = mvMatrixStack.pop();
-}
-
 function setMatrixUniforms()
 {
   if (shaderProgram.pMatrixUniform != -1)
@@ -135,11 +119,6 @@ function setMatrixUniforms()
     mat3.transpose(normalMatrix);
     gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
   }
-}
-
-function degToRad(degrees)
-{
-  return degrees * Math.PI / 180;
 }
 
 
