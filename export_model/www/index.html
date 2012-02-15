@@ -10,14 +10,16 @@
   <script src="js/webgl-utils.js"></script>
   <script src="js/jquery-1.7.1.min.js"></script>
   <script src="js/bootstrap.min.js"></script>
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-responsive.min.css" rel="stylesheet">
   <script src="js/jquery.center.js"></script>
-  <!--<script src="js/jquery-ui-1.8.17.custom.min.js"></script>-->
+  <!--<script src="js/jquery-ui-1.8.17.custom.min.js"></script>
+  <link href="css/smoothness/jquery-ui-1.8.17.custom.css" rel="stylesheet">-->
   <script src="js/jquery.base64.min.js"></script>
   <script src="js/webgl-debug.js"></script>
   <script src="js/fpscounter.js"></script>
-  <link href="css/bootstrap.min.css" rel="stylesheet">
-  <link href="css/bootstrap-responsive.min.css" rel="stylesheet">
-  <link href="css/smoothness/jquery-ui-1.8.17.custom.css" rel="stylesheet">
+  <script src="js/ace-noconflict.js"></script>
+  <script src="js/mode-glsl-noconflict.js"></script>
 
   <link href="css/style.css" rel="stylesheet">
   <script src="js/util.js"></script>
@@ -65,22 +67,16 @@
   </div>
 
   <div class="row">
-    <div class="span12">
-      <div>
-      </div>
-    </div>
-  </div>
-  <div class="row">
     <div class="span6">
-      <div>
-        <label for="textarea">Vertex shader:</label>
-        <textarea id="vertex-shader" rows="15"></textarea>
+      <div>Vertex shader:</div>
+      <div id="vertex-shader-wrapper">
+        <div id="vertex-shader"></div>
       </div>
     </div>
     <div class="span6">
-      <div>
-        <label for="textarea">Fragment shader:</label>
-        <textarea id="fragment-shader" rows="15"></textarea>
+      <div>Fragment shader:</div>
+      <div id="fragment-shader-wrapper">
+        <div id="fragment-shader"></div>
       </div>
     </div>
   </div>

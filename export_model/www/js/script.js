@@ -8,6 +8,8 @@ var fpscounter = null;
 var mvMatrix = mat4.create();
 var mvMatrixStack = [];
 var pMatrix = mat4.create();
+var vertexShaderEditor = null;
+var fragmentShaderEditor = null;
 
 
 function throwOnGLError(err, funcName, args)
@@ -230,8 +232,8 @@ function reloadData()
   try
   {
     shaderProgram = loadShaders(gl, 
-        $("#vertex-shader").val(), 
-        $("#fragment-shader").val());
+        vertexShaderEditor.getSession().getValue(), 
+        fragmentShaderEditor.getSession().getValue());
   }
   catch (e)
   {
@@ -267,16 +269,21 @@ function main()
   gl = initGL($("#canvas"));
 
   // Load initial data.
-  $("#vertex-shader").val(
-      getSync("glsl/vertex.glsl")).width("100%");
-  $("#fragment-shader").val(
-      getSync("glsl/fragment.glsl")).width("100%");
-  $("#c2g-base64").val(
-      getSync("data/monkey.c2g.txt")).width("100%");
+  $("#c2g-base64").val(getSync("data/monkey.c2g.txt")).width("100%");
 
-  $("#apply-button").click(reloadData);
+  var GLSLScriptMode = ace.require("ace/mode/glsl").Mode;
+
+  vertexShaderEditor = ace.edit("vertex-shader");
+  vertexShaderEditor.getSession().setMode(new GLSLScriptMode());
+  vertexShaderEditor.getSession().setValue(getSync("glsl/vertex.glsl"));
+
+  fragmentShaderEditor = ace.edit("fragment-shader");
+  fragmentShaderEditor.getSession().setMode(new GLSLScriptMode());
+  fragmentShaderEditor.getSession().setValue(getSync("glsl/fragment.glsl"));
 
   fpscounter = new FPSCounter($("#fps")[0], 50);
+
+  $("#apply-button").click(reloadData);
 
   reloadData();
 }
