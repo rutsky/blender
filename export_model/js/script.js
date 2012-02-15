@@ -1,51 +1,3 @@
-function getSync(url)
-{
-  var val = null;
-
-  $.ajax({
-    'async': false,
-    'global': false,
-    'url': url,
-    'success': function(data) {
-      val = data;
-    }
-  });
-
-  return val;
-};
-
-
-// From <http://stackoverflow.com/a/7183523>
-function rawStringToBuffer(str, offset, length)
-{
-  if (offset == undefined)
-  {
-    var offset = 0;
-  }
-
-  if (length == undefined)
-  {
-    var length = str.length;
-  }
-  else
-  {
-    if (length > str.length)
-    {
-      var length = str.length;
-    }
-  }
-
-  var arr = new Array(length);
-  var idx;
-  for (idx = offset; idx < length + offset; ++idx) 
-  {
-    arr[idx - offset] = str.charCodeAt(idx) & 0xFF;
-  }
-  // You may create an ArrayBuffer from a standard array (of values) as follows:
-  return new Uint8Array(arr).buffer;
-}
-
-
 var gl = null;
 var vertexBuffer = null;
 var indexBuffer = null;
@@ -53,12 +5,19 @@ var shaderProgram = null;
 var animRequest = null;
 var startTime = new Date().getTime() / 1000.0;
 var fpscounter = null;
+var mvMatrix = mat4.create();
+var mvMatrixStack = [];
+var pMatrix = mat4.create();
+var vertexShaderEditor = null;
+var fragmentShaderEditor = null;
+
 
 function throwOnGLError(err, funcName, args)
 {
   var gl_error = WebGLDebugUtils.glEnumToString(err);
   throw new Error("WebGL Error: '" + gl_error + "' was caused by call to '" + funcName + "'");
 }
+
 
 function initGL(canvas) 
 {
@@ -148,26 +107,6 @@ function loadShaders(gl, vertex_code, fragment_code)
 }
 
 
-var mvMatrix = mat4.create();
-var mvMatrixStack = [];
-var pMatrix = mat4.create();
-
-function mvPushMatrix() 
-{
-  var copy = mat4.create();
-  mat4.set(mvMatrix, copy);
-  mvMatrixStack.push(copy);
-}
-
-function mvPopMatrix() 
-{
-  if (mvMatrixStack.length == 0) 
-  {
-    throw "Invalid popMatrix!";
-  }
-  mvMatrix = mvMatrixStack.pop();
-}
-
 function setMatrixUniforms()
 {
   if (shaderProgram.pMatrixUniform != -1)
@@ -182,11 +121,6 @@ function setMatrixUniforms()
     mat3.transpose(normalMatrix);
     gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
   }
-}
-
-function degToRad(degrees)
-{
-  return degrees * Math.PI / 180;
 }
 
 
@@ -298,8 +232,8 @@ function reloadData()
   try
   {
     shaderProgram = loadShaders(gl, 
-        $("#vertex-shader").val(), 
-        $("#fragment-shader").val());
+        vertexShaderEditor.getSession().getValue(), 
+        fragmentShaderEditor.getSession().getValue());
   }
   catch (e)
   {
@@ -329,29 +263,29 @@ function reloadData()
   tick(gl, vertexBuffer, indexBuffer);
 }
 
-function webGLStart()
+function main()
 {
   // Initialize WebGL (can fail and return null).
   gl = initGL($("#canvas"));
 
   // Load initial data.
-  $("#vertex-shader").val(
-      getSync("glsl/vertex.glsl")).width("100%");
-  $("#fragment-shader").val(
-      getSync("glsl/fragment.glsl")).width("100%");
-  $("#c2g-base64").val(
-      getSync("data/monkey.c2g.txt")).width("100%");
+  $("#c2g-base64").val(getSync("data/monkey.c2g.txt")).width("100%");
 
-  $("#apply-button").click(reloadData);
+  var GLSLScriptMode = ace.require("ace/mode/glsl").Mode;
+
+  vertexShaderEditor = ace.edit("vertex-shader");
+  vertexShaderEditor.getSession().setMode(new GLSLScriptMode());
+  vertexShaderEditor.getSession().setValue(getSync("glsl/vertex.glsl"));
+
+  fragmentShaderEditor = ace.edit("fragment-shader");
+  fragmentShaderEditor.getSession().setMode(new GLSLScriptMode());
+  fragmentShaderEditor.getSession().setValue(getSync("glsl/fragment.glsl"));
 
   fpscounter = new FPSCounter($("#fps")[0], 50);
 
-  reloadData();
-}
+  $("#apply-button").click(reloadData);
 
-function main()
-{
-  webGLStart();
+  reloadData();
 }
 
 // vim: set sw=2 ts=2 et:
