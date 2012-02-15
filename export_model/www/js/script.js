@@ -1,50 +1,3 @@
-function getSync(url)
-{
-  var val = null;
-
-  $.ajax({
-    'async': false,
-    'global': false,
-    'url': url,
-    'success': function(data) {
-      val = data;
-    }
-  });
-
-  return val;
-};
-
-
-// From <http://stackoverflow.com/a/7183523>
-function rawStringToBuffer(str, offset, length)
-{
-  if (offset == undefined)
-  {
-    var offset = 0;
-  }
-
-  if (length == undefined)
-  {
-    var length = str.length;
-  }
-  else
-  {
-    if (length > str.length)
-    {
-      var length = str.length;
-    }
-  }
-
-  var arr = new Array(length);
-  var idx;
-  for (idx = offset; idx < length + offset; ++idx) 
-  {
-    arr[idx - offset] = str.charCodeAt(idx) & 0xFF;
-  }
-  // You may create an ArrayBuffer from a standard array (of values) as follows:
-  return new Uint8Array(arr).buffer;
-}
-
 
 var gl = null;
 var vertexBuffer = null;
@@ -329,7 +282,7 @@ function reloadData()
   tick(gl, vertexBuffer, indexBuffer);
 }
 
-function webGLStart()
+function main()
 {
   // Initialize WebGL (can fail and return null).
   gl = initGL($("#canvas"));
@@ -347,11 +300,6 @@ function webGLStart()
   fpscounter = new FPSCounter($("#fps")[0], 50);
 
   reloadData();
-}
-
-function main()
-{
-  webGLStart();
 }
 
 // vim: set sw=2 ts=2 et:
