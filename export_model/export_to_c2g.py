@@ -152,4 +152,4 @@ if __name__ == "__main__":
     register() # COMMENTED FOR DEBUG
 
     # test call
-    bpy.ops.export.c2g('INVOKE_DEFAULT')
+    #bpy.ops.export.c2g('INVOKE_DEFAULT')
