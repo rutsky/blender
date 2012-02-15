@@ -50,6 +50,9 @@ var gl = null;
 var vertexBuffer = null;
 var indexBuffer = null;
 var shaderProgram = null;
+var animRequest = null;
+var startTime = new Date().getTime() / 1000.0;
+var fpscounter = null;
 
 function throwOnGLError(err, funcName, args)
 {
@@ -63,6 +66,9 @@ function initGL(canvas)
   if (gl)
   {
     gl = WebGLDebugUtils.makeDebugContext(gl, throwOnGLError);
+
+    canvas[0].width = canvas.width();
+    canvas[0].height = canvas.height();
 
     gl.viewportWidth = canvas.width();
     gl.viewportHeight = canvas.height();
@@ -119,51 +125,24 @@ function loadShaders(gl, vertex_code, fragment_code)
 
   gl.useProgram(sp);
 
-  sp.vertexPositionAttribute = 
-      gl.getAttribLocation(sp, "aVertexPosition");
+  sp.vertexPositionAttribute = gl.getAttribLocation(sp, "aVertexPosition");
   if (sp.vertexPositionAttribute != -1)
-  {
     gl.enableVertexAttribArray(sp.vertexPositionAttribute);
-  }
 
-  sp.vertexNormalAttribute = 
-      gl.getAttribLocation(sp, "aVertexNormal");
+  sp.vertexNormalAttribute = gl.getAttribLocation(sp, "aVertexNormal");
   if (sp.vertexNormalAttribute != -1)
-  {
     gl.enableVertexAttribArray(sp.vertexNormalAttribute);
-  }
 
-  sp.textureCoordAttribute = 
-      gl.getAttribLocation(sp, "aTextureCoord");
+  sp.textureCoordAttribute = gl.getAttribLocation(sp, "aTextureCoord");
   if (sp.textureCoordAttribute != -1)
-  {
     gl.enableVertexAttribArray(sp.textureCoordAttribute);
-  }
 
-  sp.pMatrixUniform = 
-      gl.getUniformLocation(sp, "uPMatrix");
-  sp.mvMatrixUniform = 
-      gl.getUniformLocation(sp, "uMVMatrix");
-  sp.nMatrixUniform = 
-      gl.getUniformLocation(sp, "uNMatrix");
-  sp.samplerUniform = 
-      gl.getUniformLocation(sp, "uSampler");
-  sp.materialShininessUniform = 
-      gl.getUniformLocation(sp, "uMaterialShininess");
-  sp.showSpecularHighlightsUniform = 
-      gl.getUniformLocation(sp, "uShowSpecularHighlights");
-  sp.useTexturesUniform = 
-      gl.getUniformLocation(sp, "uUseTextures");
-  sp.useLightingUniform = 
-      gl.getUniformLocation(sp, "uUseLighting");
-  sp.ambientColorUniform = 
-      gl.getUniformLocation(sp, "uAmbientColor");
-  sp.pointLightingLocationUniform = 
-      gl.getUniformLocation(sp, "uPointLightingLocation");
-  sp.pointLightingSpecularColorUniform = 
-      gl.getUniformLocation(sp, "uPointLightingSpecularColor");
-  sp.pointLightingDiffuseColorUniform = 
-      gl.getUniformLocation(sp, "uPointLightingDiffuseColor");
+  sp.pMatrixUniform = gl.getUniformLocation(sp, "uPMatrix");
+  sp.mvMatrixUniform = gl.getUniformLocation(sp, "uMVMatrix");
+  sp.nMatrixUniform = gl.getUniformLocation(sp, "uNMatrix");
+  sp.samplerUniform = gl.getUniformLocation(sp, "uSampler");
+
+  sp.timeUniform = gl.getUniformLocation(sp, "uTime");
 
   return sp;
 }
@@ -191,13 +170,18 @@ function mvPopMatrix()
 
 function setMatrixUniforms()
 {
-  gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-  gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+  if (shaderProgram.pMatrixUniform != -1)
+    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+  if (shaderProgram.mvMatrixUniform != -1)
+    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
 
-  var normalMatrix = mat3.create();
-  mat4.toInverseMat3(mvMatrix, normalMatrix);
-  mat3.transpose(normalMatrix);
-  gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
+  if (shaderProgram.nMatrixUniform)
+  {
+    var normalMatrix = mat3.create();
+    mat4.toInverseMat3(mvMatrix, normalMatrix);
+    mat3.transpose(normalMatrix);
+    gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
+  }
 }
 
 function degToRad(degrees)
@@ -211,31 +195,37 @@ function loadGeometry(gl, c2g_file)
   var buffer2_20 = rawStringToBuffer(c2g_file, 2, 18);
   var buffer0_20 = rawStringToBuffer(c2g_file, 0, 20);
 
-  var numVertices = Uint32Array(buffer2_20, 8, 1)[0];
+  var numVertices = new Uint32Array(buffer2_20, 8, 1)[0];
   console.log(numVertices);
-  var numIndices = Uint32Array(buffer0_20, 16, 1)[0];
+  var numIndices = new Uint32Array(buffer0_20, 16, 1)[0];
   console.log(numIndices);
 
-  var vertexArrayBuffer = rawStringToBuffer(c2g_file, 
-      20, 6 * 4 * numVertices);
-  var indexArrayBuffer = rawStringToBuffer(c2g_file, 
-      20 + 6 * 4 * numVertices, 2 * numIndices);
+  var vertexFloat32Array = new Float32Array(
+      rawStringToBuffer(c2g_file, 
+          20, 
+          6 * 4 * numVertices));
+  var indexUint16Array = new Uint16Array(
+      rawStringToBuffer(c2g_file, 
+          20 + 6 * 4 * numVertices, 
+          2 * numIndices));
 
   vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, 
-      new Float32Array(vertexArrayBuffer), 
-      gl.STATIC_DRAW);
-  vertexBuffer.itemSize = 6;
-  vertexBuffer.numItems = numVertices;
+      vertexFloat32Array, gl.STATIC_DRAW);
+  vertexBuffer.vertexSize = 6;
+  vertexBuffer.numVertices = numVertices;
 
   indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, 
-      new Uint16Array(indexArrayBuffer), 
-      gl.STATIC_DRAW);
-  indexBuffer.itemSize = 1;
-  indexBuffer.numItems = numIndices;
+      indexUint16Array, gl.STATIC_DRAW);
+  indexBuffer.numIndices = numIndices;
+
+  console.log("Vertices: " + vertexFloat32Array.length / 6 +
+    ", vertices floats: " + vertexFloat32Array.length);
+  console.log("Indices: " + indexUint16Array.length +
+    ", indices shorts: " + indexUint16Array.length);
 
   return [vertexBuffer, indexBuffer]
 }
@@ -243,17 +233,26 @@ function loadGeometry(gl, c2g_file)
 
 function drawScene(gl, vertexBuffer, indexBuffer)
 {
+  fpscounter.update();
+
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 
-  mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+  mat4.perspective(90, gl.viewportWidth / gl.viewportHeight, 
+      0.1, 10.0, pMatrix);
 
   mat4.identity(mvMatrix);
+  mat4.translate(mvMatrix, [0, 0, -2]);
+  setMatrixUniforms();
 
-  mat4.translate(mvMatrix, [0, 0, -40]);
+  var time = new Date().getTime() / 1000.0 - startTime;
+  gl.uniform1f(shaderProgram.timeUniform, time);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
-      3, gl.FLOAT, false, 6 * 4, 0);
+  if (shaderProgram.vertexPositionAttribute != -1)
+  {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
+        3, gl.FLOAT, false, 6 * 4, 0);
+  }
 
   if (shaderProgram.vertexNormalAttribute != -1)
   {
@@ -263,17 +262,17 @@ function drawScene(gl, vertexBuffer, indexBuffer)
   }
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  setMatrixUniforms();
 
-  //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.drawElements(gl.TRIANGLES, indexBuffer.numItems / 3, 
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  gl.drawElements(gl.TRIANGLES, indexBuffer.numIndices, 
       gl.UNSIGNED_SHORT, 0);
 }
 
 
 function tick(gl, vertexBuffer, indexBuffer)
 {
-  requestAnimFrame(function() { 
+  animRequest = requestAnimFrame(function() { 
     tick(gl, vertexBuffer, indexBuffer); 
   });
 
@@ -290,7 +289,11 @@ function reloadData()
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);
 
-  cancelRequestAnimFrame();
+  if (animRequest != null)
+  {
+    cancelRequestAnimFrame(animRequest);
+    animRequest = null;
+  }
 
   try
   {
@@ -338,6 +341,10 @@ function webGLStart()
       getSync("glsl/fragment.glsl")).width("100%");
   $("#c2g-base64").val(
       getSync("data/monkey.c2g.txt")).width("100%");
+
+  $("#apply-button").click(reloadData);
+
+  fpscounter = new FPSCounter($("#fps")[0], 50);
 
   reloadData();
 }

@@ -1,22 +1,13 @@
-body {
-}
- 
 #canvas {
   border: none;
-  width: 640px;
-  height: 480px;
+  width: 100%;
+  height: 100%;
 }
 
 #canvas-wrapper {
-  margin: 5px;
   width: 640px;
   height: 480px;
-  margin: 0px auto;
-}
-
-#loadingtext {
-  font-size: 2em;
-  color: white;
+  margin: 5px auto;
 }
 
 #vertex-shader {
@@ -25,6 +16,22 @@ body {
 
 #fragment-shader {
   width: 100%:
+}
+
+#canvas-row {
+  position: relative;
+}
+
+#apply-button {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
+}
+
+#fps {
+  position: absolute;
+  right: 0px;
+  top: 20px;
 }
 
 /* vim: set ts=2 sw=2 et: */
