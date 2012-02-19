@@ -23,7 +23,10 @@
 # <pep8-80 compliant>
 
 import struct
-from itertools import chain
+import textwrap
+import base64
+import json
+import itertools
 
 import bpy
 
@@ -177,22 +180,50 @@ def prepare_binary_data_v0_1(description, vertices, indices):
     return data
 
 
-def write_data(filepath, format_version, data):
+def write_data(filepath, format_version, data, write_base64=False, 
+               write_json=False):
     if format_version == '0001':
-        data = prepare_binary_data_v0_1(*data)
+        data_bin = prepare_binary_data_v0_1(*data)
     else:
         assert False
 
-    with open(filepath, 'wb') as f:
-        f.write(data)
-        
+    file_name = filepath
+    print("Writing binary to {0}".format(file_name))
+    with open(file_name, 'wb') as f:
+        f.write(data_bin)
 
-def export_to_c2g(context, filepath, format_version):
-    print("Exporting to '{0}'...".format(filepath))
+    if write_base64:
+        file_name = filepath + '.base64'
+        print("Writing Base64 representation to {0}".format(file_name))
+        with open(file_name, 'wb') as f:
+            f.write(base64.b64encode(data_bin))
+        
+    if write_json:
+        file_name = filepath + '.json'
+        print("Writing JSON representation to {0}".format(file_name))
+        with open(file_name, 'wt') as f:
+            data_json = textwrap.dedent("""\
+            [
+              {descr},
+              {vertices},
+              {indices}
+            ]
+            """.format(
+                descr=json.dumps(data[0]), 
+                vertices=json.dumps(list(itertools.chain(*data[1]))),
+                indices=json.dumps(data[2])))
+            f.write(data_json)
+
+
+def export_to_c2g(context, filepath, format_version, 
+                  write_base64=False, write_json=False):
+    """Export object geometry to C2G format"""
+    obj = context.active_object
+    print("Exporting '{0}'...".format(obj.name))
 
     data = object_triangles_data(context.active_object.data)
     if data is not None:
-        write_data(filepath, format_version, data)
+        write_data(filepath, format_version, data, write_base64, write_json)
 
         print("Successfully exported!")
     else:
@@ -240,13 +271,27 @@ class ExportToC2G(bpy.types.Operator, ExportHelper):
             default='GL_TRIANGLES',
             )
 
+    write_base64 = BoolProperty(
+            name="Export in Base64",
+            description="Also export Base64-encoded binary",
+            default=False,
+            )
+
+    write_json = BoolProperty(
+            name="Export in JSON",
+            description="Also export JSON-encoded text",
+            default=False,
+            )
+
     @classmethod
     def poll(cls, context):
         return context.active_object is not None
 
     def execute(self, context):
         return export_to_c2g(context, self.filepath, 
-            self.format_version)
+            self.format_version, 
+            self.write_base64,
+            self.write_json)
 
 
 # Only needed if you want to add into a dynamic menu
