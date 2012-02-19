@@ -1,6 +1,29 @@
+# Copyright (C) 2012  Vladimir Rutsky <altsysrq@gmail.com>
+
+# MIT License:
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 # <pep8-80 compliant>
 
 import struct
+from itertools import chain
 
 import bpy
 
@@ -10,27 +33,102 @@ from bpy_extras.io_utils import ExportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 
 
-MAGIC = b'CGSG'
+MAGIC = b'c2g\x1e'
 
-def object_data(obj, convert_quads_to_tris):
-    vertices = []
-    for v in obj.data.vertices:
-        vertices.append(list(v.co) + list(v.normal))
+def object_triangles_data(data):
+    """Retrieve object vertices and indices data for drawing with GL_TRIANGLES
+    
+    Returns tuple (description, vertices, indices), where 
+      * description - tuple of
+        * number of vertex colors per vertex,
+        * number of texture coordinates per vertex;
+      * vertices - list of tuples of 
+        * v.x, v.y, v.z - vertex coordinates (float),
+        * n.x, n.y, n.z - vertex normal (float),
+        * c_1.r, c_1.g, c_1.b
+          ...
+          c_n.r, c_n.g, c_n.b - vertex colors (float),
+        * t_1.u, t_2.v
+          ...
+          t_n.u, t_n.v - vertex texture coordinates (float);
+      * indices of  
 
+    Example of return data:
+
+      (
+       # description:
+       (1,   # single color for each vertex
+        2),  # two texture coordinates for each vertex
+       
+       # vertices:
+       (  # first vertex:
+        (
+          0.0, 0.0, 0.0,  # position
+          0.0, 0.0, 1.0,  # normal
+          127,   0, 130,  # color 1
+          0.7, 0.3,       # texture coordinate 1
+          0.0, 0.5,       # texture coordinate 2
+        ),
+          # second vertex:
+        (...),
+       ),
+
+       # indices:
+       (0, 1, 2, # first triangle
+        2, 1, 3, # second triangle
+        ...
+       )
+      )
+    """
+
+    if not (hasattr(data, 'vertices') and hasattr(data, 'faces')):
+        print("Object doesn't have faces or vertices "
+            "attributes".format(obj))
+        return [0, 0], [], []
+
+    vertex_to_index = {}
     indices = []
-    for f in obj.data.faces:
-        if len(f.vertices) == 3:
-            indices.extend(list(f.vertices))
-        elif len(f.vertices) == 4 and convert_quads_to_tris:
-            indices.extend([f.vertices[0], f.vertices[1], f.vertices[2]])
-            indices.extend([f.vertices[0], f.vertices[2], f.vertices[3]])
-        else:
-            pass
 
-    return vertices, indices
+    for face_idx, face in enumerate(data.faces):
+        face_vertices_indices = []
+        for face_vert_idx, vert_idx in enumerate(face.vertices):
+            # For each vertex of face extract required information.
+            vertex = []
+            
+            vertex.extend(data.vertices[vert_idx].co)
+            vertex.extend(data.vertices[vert_idx].normal)
 
-def prepare_data_v1_0(vertices, indices):
-    # All numeric types stored in little-endian.
+            for color_layer in data.vertex_colors:
+                color = getattr(color_layer.data[face_idx], 
+                                "color{0}".format(face_vert_idx + 1))
+                vertex.extend(color)
+
+            for tex_coord_layer in data.uv_textures:
+                tex_coord = getattr(tex_coord_layer.data[face_idx], 
+                                "uv{0}".format(face_vert_idx + 1))
+                vertex.extend(tex_coord)
+
+            idx = vertex_to_index.setdefault(tuple(vertex), 
+                                             len(vertex_to_index))
+            face_vertices_indices.append(idx)
+
+        # Face tesselation (actually face can have only 3 and 4 vertices).
+        for i in range(1, len(face_vertices_indices) - 1):
+            indices.extend([0, i, i + 1])
+
+    num_colors = len(data.vertex_colors)
+    num_tex_coords = len(data.uv_textures)
+
+    # Extract ordered list of vertices from vertex to index map.
+    vertices = list(map(lambda x: x[0], 
+                        sorted(vertex_to_index.items(), key=lambda x: x[1])))
+
+    return (num_colors, num_tex_coords), vertices, indices
+
+def prepare_binary_data_v0_1(description, vertices, indices):
+    """Prepares binary representation of geometry data"""
+
+    # All numeric types stored little-endian.
 
     # See <http://docs.python.org/py3k/library/struct.html> for details about
     # serialization with struct.
@@ -40,14 +138,31 @@ def prepare_data_v1_0(vertices, indices):
     #  0: 4 bytes - magic
     data += MAGIC
     #  4: 4 bytes - format version
-    data += b'0100'
-    #  8: 2 bytes unsigned short - single vertex size in bytes
-    data += struct.pack('<H', 4 * 3 + 4 * 3)
-    # 10: 4 bytes unsigned int - number of vertices
-    data += struct.pack('<I', len(vertices))
+    data += b'0001'
+
+    #  8: 2 bytes unsigned short - number of colors per vertex
+    data += struct.pack('<H', description[0])
+    # 10 2 bytes unsigned short - bumber of texture coordinates per vertex
+    data += struct.pack('<H', description[1])
+
+    float_size = 4
+    ushort_size = 2
+    num_position_comps = 3
+    num_normal_comps = 3
+    num_color_comps = 3
+    num_tex_comps = 2
+    
+    vertex_size = float_size * (num_position_comps + num_normal_comps + 
+                                num_color_comps * description[0] + 
+                                num_tex_comps * description[1])
+
+    # 12: 2 bytes unsigned short - single vertex size in bytes
+    data += struct.pack('<H', vertex_size)
     # 14: 2 bytes unsigned short - single index size in bytes
-    data += struct.pack('<H', 2)
-    # 16: 4 bytes unsigned int - number of indices
+    data += struct.pack('<H', ushort_size)
+    # 16: 4 bytes unsigned int - number of vertices
+    data += struct.pack('<I', len(vertices))
+    # 20: 4 bytes unsigned int - number of indices
     data += struct.pack('<I', len(indices))
 
     # Vertices
@@ -62,34 +177,32 @@ def prepare_data_v1_0(vertices, indices):
     return data
 
 
-def write_data(filepath, format_version, vertices, indices):
-    if format_version == '0100':
-        data = prepare_data_v1_0(vertices, indices)
+def write_data(filepath, format_version, data):
+    if format_version == '0001':
+        data = prepare_binary_data_v0_1(*data)
+    else:
+        assert False
 
     with open(filepath, 'wb') as f:
         f.write(data)
         
 
-def export_to_c2g(context, filepath, format_version, convert_quads_to_tris):
+def export_to_c2g(context, filepath, format_version):
     print("Exporting to '{0}'...".format(filepath))
 
-    vertices, indices = [], []
-    for obj in context.selected_objects:
-        obj_vertices, obj_indices = object_data(obj, convert_quads_to_tris)
+    data = object_triangles_data(context.active_object.data)
+    if data is not None:
+        write_data(filepath, format_version, data)
 
-        off = len(vertices)
-        vertices.extend(obj_vertices)
-        indices.extend([idx + off for idx in obj_indices])
-
-    write_data(filepath, format_version, vertices, indices)
-
-    print("Successfully exported!")
+        print("Successfully exported!")
+    else:
+        print("Export failed.")
 
     return {'FINISHED'}
 
 
 class ExportToC2G(bpy.types.Operator, ExportHelper):
-    '''Export to C2G binary format.'''
+    """Export to C2G binary format"""
     bl_idname = "export.c2g"  # this is important since its how 
                               # bpy.ops.export.c2g is constructed
     bl_label = "Export C2G"
@@ -104,18 +217,27 @@ class ExportToC2G(bpy.types.Operator, ExportHelper):
 
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
-    convert_quads_to_tris = BoolProperty(
-            name="Convert Quads to Triangles",
-            description="Subdivide every quad by two triangles in mesh",
-            default=True,
-            )
+    #in_world_cs = BoolProperty(
+    #        name="Export in World CS",
+    #        description="Export objects in world coordinate system",
+    #        default=False,
+    #        )
 
     format_version = EnumProperty(
             name="Version Format",
             description="Select C2G binary format version",
-            items=(('0100', "v1.0", "Version 1.0"),
+            items=(('0001', "v0.1", "Version 0.1"),
                    ),
-            default='0100',
+            default='0001',
+            )
+
+    vertex_order = EnumProperty(
+            name="Draw Mode",
+            description="Order of vertices for drawing",
+            items=(('GL_TRIANGLES', "GL_TRIANGLES", 
+                    "GL_TRIANGLES OpenGL drawing mode"),
+                   ),
+            default='GL_TRIANGLES',
             )
 
     @classmethod
@@ -124,7 +246,7 @@ class ExportToC2G(bpy.types.Operator, ExportHelper):
 
     def execute(self, context):
         return export_to_c2g(context, self.filepath, 
-            self.format_version, self.convert_quads_to_tris)
+            self.format_version)
 
 
 # Only needed if you want to add into a dynamic menu
