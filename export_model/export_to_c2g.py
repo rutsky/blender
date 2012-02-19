@@ -188,19 +188,19 @@ def write_data(filepath, format_version, data, write_base64=False,
         assert False
 
     file_name = filepath
-    print("Writing binary to {0}".format(file_name))
+    print("  Writing binary to {0}".format(file_name))
     with open(file_name, 'wb') as f:
         f.write(data_bin)
 
     if write_base64:
         file_name = filepath + '.base64'
-        print("Writing Base64 representation to {0}".format(file_name))
+        print("  Writing Base64 representation to {0}".format(file_name))
         with open(file_name, 'wb') as f:
             f.write(base64.b64encode(data_bin))
         
     if write_json:
         file_name = filepath + '.json'
-        print("Writing JSON representation to {0}".format(file_name))
+        print("  Writing JSON representation to {0}".format(file_name))
         with open(file_name, 'wt') as f:
             data_json = textwrap.dedent("""\
             [
@@ -218,10 +218,21 @@ def write_data(filepath, format_version, data, write_base64=False,
 def export_to_c2g(context, filepath, format_version, 
                   write_base64=False, write_json=False):
     """Export object geometry to C2G format"""
+
     obj = context.active_object
     print("Exporting '{0}'...".format(obj.name))
 
-    data = object_triangles_data(context.active_object.data)
+    obj_data = obj.data
+    print("  vertices: {verts}\n"
+          "  faces: {faces}\n"
+          "  vertex color layers: {colors}\n"
+          "  texture coords layers: {texs}".format(
+            verts=len(obj_data.vertices),
+            faces=len(obj_data.faces),
+            colors=len(obj_data.vertex_colors),
+            texs=len(obj_data.uv_textures)))
+
+    data = object_triangles_data(obj.data)
     if data is not None:
         write_data(filepath, format_version, data, write_base64, write_json)
 
