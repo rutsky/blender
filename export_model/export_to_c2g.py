@@ -36,7 +36,15 @@ from bpy_extras.io_utils import ExportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 
 
-MAGIC = b'c2g\x1e'
+class Constants:
+    magic = b'c2g\x1e'
+
+    float_size = 4
+    ushort_size = 2
+    num_position_comps = 3
+    num_normal_comps = 3
+    num_color_comps = 3
+    num_tex_comps = 2
 
 def object_triangles_data(data):
     """Retrieve object vertices and indices data for drawing with GL_TRIANGLES
@@ -139,7 +147,7 @@ def prepare_binary_data_v0_1(description, vertices, indices):
     data = b''
 
     #  0: 4 bytes - magic
-    data += MAGIC
+    data += Constants.magic
     #  4: 4 bytes - format version
     data += b'0001'
 
@@ -148,21 +156,15 @@ def prepare_binary_data_v0_1(description, vertices, indices):
     # 10 2 bytes unsigned short - bumber of texture coordinates per vertex
     data += struct.pack('<H', description[1])
 
-    float_size = 4
-    ushort_size = 2
-    num_position_comps = 3
-    num_normal_comps = 3
-    num_color_comps = 3
-    num_tex_comps = 2
-    
-    vertex_size = float_size * (num_position_comps + num_normal_comps + 
-                                num_color_comps * description[0] + 
-                                num_tex_comps * description[1])
+    C = Constants
+    vertex_size = C.float_size * (C.num_position_comps + C.num_normal_comps + 
+                                C.num_color_comps * description[0] + 
+                                C.num_tex_comps * description[1])
 
     # 12: 2 bytes unsigned short - single vertex size in bytes
     data += struct.pack('<H', vertex_size)
     # 14: 2 bytes unsigned short - single index size in bytes
-    data += struct.pack('<H', ushort_size)
+    data += struct.pack('<H', C.ushort_size)
     # 16: 4 bytes unsigned int - number of vertices
     data += struct.pack('<I', len(vertices))
     # 20: 4 bytes unsigned int - number of indices
@@ -223,17 +225,35 @@ def export_to_c2g(context, filepath, format_version,
     print("Exporting '{0}'...".format(obj.name))
 
     obj_data = obj.data
-    print("  vertices: {verts}\n"
-          "  faces: {faces}\n"
-          "  vertex color layers: {colors}\n"
-          "  texture coords layers: {texs}".format(
+    print(textwrap.dedent("""\
+          Blender mesh:
+            vertices: {verts}
+            faces: {faces}
+            vertex color layers: {colors}
+            texture coords layers: {texs}
+          """.format(
             verts=len(obj_data.vertices),
             faces=len(obj_data.faces),
             colors=len(obj_data.vertex_colors),
-            texs=len(obj_data.uv_textures)))
+            texs=len(obj_data.uv_textures))
+          ))
 
     data = object_triangles_data(obj.data)
     if data is not None:
+        C = Constants
+        vertex_components = (C.num_position_comps + C.num_normal_comps + 
+            C.num_color_comps * data[0][0] + C.num_tex_comps * data[0][1])
+        print(textwrap.dedent("""\
+              Generated mesh:
+                vertex components: {comps}
+                vertices: {verts}
+                indices: {inds}
+              """.format(
+                comps=vertex_components,
+                verts=len(data[1]),
+                inds=len(data[2]))
+              ))
+
         write_data(filepath, format_version, data, write_base64, write_json)
 
         print("Successfully exported!")
