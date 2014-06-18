@@ -6,4 +6,4 @@ Model export + WebGL visualization
 ----------------------------------
 
 export_model/ - source, 
-`online WebGL demo <http://rutsky.github.com/blender/export_model/>`_.
+`online WebGL demo <https://rutsky.github.io/blender/export_model/>`_.
