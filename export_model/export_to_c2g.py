@@ -153,7 +153,7 @@ def prepare_binary_data_v0_1(description, vertices, indices):
 
     #  8: 2 bytes unsigned short - number of colors per vertex
     data += struct.pack('<H', description[0])
-    # 10 2 bytes unsigned short - bumber of texture coordinates per vertex
+    # 10 2 bytes unsigned short - number of texture coordinates per vertex
     data += struct.pack('<H', description[1])
 
     C = Constants
