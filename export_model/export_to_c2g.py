@@ -94,7 +94,7 @@ def object_triangles_data(data):
 
     if not (hasattr(data, 'vertices') and hasattr(data, 'faces')):
         print("Object doesn't have faces or vertices "
-            "attributes".format(obj))
+            "attributes")
         return [0, 0], [], []
 
     vertex_to_index = {}
