@@ -92,7 +92,7 @@ def object_triangles_data(data):
       )
     """
 
-    if not (hasattr(data, 'vertices') and hasattr(data, 'faces')):
+    if not (hasattr(data, 'vertices') and hasattr(data, 'tessfaces')):
         print("Object doesn't have faces or vertices "
             "attributes")
         return [0, 0], [], []
@@ -100,7 +100,7 @@ def object_triangles_data(data):
     vertex_to_index = {}
     indices = []
 
-    for face_idx, face in enumerate(data.faces):
+    for face_idx, face in enumerate(data.tessfaces):
         face_vertices_indices = []
         for face_vert_idx, vert_idx in enumerate(face.vertices):
             # For each vertex of face extract required information.
@@ -109,12 +109,12 @@ def object_triangles_data(data):
             vertex.extend(data.vertices[vert_idx].co)
             vertex.extend(data.vertices[vert_idx].normal)
 
-            for color_layer in data.vertex_colors:
+            for color_layer in data.tessface_vertex_colors:
                 color = getattr(color_layer.data[face_idx], 
                                 "color{0}".format(face_vert_idx + 1))
                 vertex.extend(color)
 
-            for tex_coord_layer in data.uv_textures:
+            for tex_coord_layer in data.tessface_uv_textures:
                 tex_coord = getattr(tex_coord_layer.data[face_idx], 
                                 "uv{0}".format(face_vert_idx + 1))
                 vertex.extend(tex_coord)
@@ -127,8 +127,8 @@ def object_triangles_data(data):
         for i in range(1, len(face_vertices_indices) - 1):
             indices.extend([0, i, i + 1])
 
-    num_colors = len(data.vertex_colors)
-    num_tex_coords = len(data.uv_textures)
+    num_colors = len(data.tessface_vertex_colors)
+    num_tex_coords = len(data.tessface_uv_textures)
 
     # Extract ordered list of vertices from vertex to index map.
     vertices = list(map(lambda x: x[0], 
@@ -225,6 +225,11 @@ def export_to_c2g(context, filepath, format_version,
     print("Exporting '{0}'...".format(obj.name))
 
     obj_data = obj.data
+
+    # Since Blender 2.62 internal representation of faces changed to NGons.
+    # explicitly day Blender to generate Ngons triangulation.
+    obj_data.update(calc_tessface=True)
+
     print(textwrap.dedent("""\
           Blender mesh:
             vertices: {verts}
@@ -233,9 +238,9 @@ def export_to_c2g(context, filepath, format_version,
             texture coords layers: {texs}
           """.format(
             verts=len(obj_data.vertices),
-            faces=len(obj_data.faces),
-            colors=len(obj_data.vertex_colors),
-            texs=len(obj_data.uv_textures))
+            faces=len(obj_data.tessfaces),
+            colors=len(obj_data.tessface_vertex_colors),
+            texs=len(obj_data.tessface_uv_textures))
           ))
 
     data = object_triangles_data(obj.data)
