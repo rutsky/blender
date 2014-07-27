@@ -130,9 +130,9 @@ function loadGeometry(gl, c2g_file)
   var buffer0_20 = rawStringToBuffer(c2g_file, 0, 20);
 
   var numVertices = new Uint32Array(buffer2_20, 8, 1)[0];
-  console.log(numVertices);
+  console.log("Number of vertices: " + numVertices);
   var numIndices = new Uint32Array(buffer0_20, 16, 1)[0];
-  console.log(numIndices);
+  console.log("Number of indices: " + numIndices);
 
   var vertexFloat32Array = new Float32Array(
       rawStringToBuffer(c2g_file, 
