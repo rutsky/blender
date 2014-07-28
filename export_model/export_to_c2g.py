@@ -160,8 +160,8 @@ def prepare_binary_data_v0_1(description, vertices, indices):
     data += struct.pack('<H', description[1])
 
     C = Constants
-    vertex_size = C.float_size * (C.num_position_comps + C.num_normal_comps + 
-                                C.num_color_comps * description[0] + 
+    vertex_size = C.float_size * (C.num_position_comps + C.num_normal_comps +
+                                C.num_color_comps * description[0] +
                                 C.num_tex_comps * description[1])
 
     # 12: 2 bytes unsigned short - single vertex size in bytes
