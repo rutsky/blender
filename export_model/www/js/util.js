@@ -8,6 +8,9 @@ function getSync(url)
     'url': url,
     'success': function(data) {
       val = data;
+    },
+    'error': function() {
+      alert("Failed to get '" + url + "'");
     }
   });
 
