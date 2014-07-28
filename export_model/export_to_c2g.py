@@ -131,7 +131,7 @@ def object_triangles_data(data):
     num_tex_coords = len(data.tessface_uv_textures)
 
     # Extract ordered list of vertices from vertex to index map.
-    vertices = list(map(lambda x: x[0], 
+    vertices = list(map(lambda x: x[0],
                         sorted(vertex_to_index.items(), key=lambda x: x[1])))
 
     return (num_colors, num_tex_coords), vertices, indices
