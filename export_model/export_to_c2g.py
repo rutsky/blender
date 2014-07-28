@@ -125,7 +125,10 @@ def object_triangles_data(data):
 
         # Face tesselation (actually face can have only 3 and 4 vertices).
         for i in range(1, len(face_vertices_indices) - 1):
-            indices.extend([0, i, i + 1])
+            indices.extend(
+                [face_vertices_indices[0],
+                 face_vertices_indices[i],
+                 face_vertices_indices[i + 1]])
 
     num_colors = len(data.tessface_vertex_colors)
     num_tex_coords = len(data.tessface_uv_textures)
