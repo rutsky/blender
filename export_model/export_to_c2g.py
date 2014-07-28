@@ -168,7 +168,7 @@ def prepare_binary_data_v0_1(description, vertices, indices):
     # 12: 2 bytes unsigned short - single vertex size in bytes
     data += struct.pack('<H', vertex_size)
     # 14: 2 bytes unsigned short - single index size in bytes
-    assert len(indices) < 2**16, "too many indices"
+    assert len(vertices) < 2**16, "too many vertices"
     data += struct.pack('<H', C.ushort_size)
     # 16: 4 bytes unsigned int - number of vertices
     data += struct.pack('<I', len(vertices))
