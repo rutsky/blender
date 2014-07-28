@@ -27,6 +27,7 @@ import textwrap
 import base64
 import json
 import itertools
+import array
 
 import bpy
 
@@ -167,6 +168,7 @@ def prepare_binary_data_v0_1(description, vertices, indices):
     # 12: 2 bytes unsigned short - single vertex size in bytes
     data += struct.pack('<H', vertex_size)
     # 14: 2 bytes unsigned short - single index size in bytes
+    assert len(indices) < 2**16, "too many indices"
     data += struct.pack('<H', C.ushort_size)
     # 16: 4 bytes unsigned int - number of vertices
     data += struct.pack('<I', len(vertices))
@@ -174,13 +176,35 @@ def prepare_binary_data_v0_1(description, vertices, indices):
     data += struct.pack('<I', len(indices))
 
     # Vertices
-    for v in vertices:
-        for c in v:
-            data += struct.pack('<f', c)
+    if False:
+        # Very slow on large number of vertices:
+        for v in vertices:
+            for c in v:
+               data += struct.pack('<f', c)
+    else:
+        # Flatten list of lists of floats to list (iterable) of floats
+        floats = itertools.chain.from_iterable(vertices)
+        # Create array of floats efficiently placed in memory
+        floats_array = array.array('f', floats)
+
+        assert floats_array.itemsize == 4
+        # TODO: do byteswap() if needed
+
+        # Store vertices
+        data += floats_array.tobytes()
 
     # Indices
-    for i in indices:
-        data += struct.pack('<H', i)
+    if False:
+        # Very slow on large number of vertices:
+        for i in indices:
+            data += struct.pack('<H', i)
+    else:
+        floats_array = array.array('H', indices)
+
+        assert floats_array.itemsize == 2
+        # TODO: do byteswap() if needed
+
+        data += floats_array.tobytes()
 
     return data
 
